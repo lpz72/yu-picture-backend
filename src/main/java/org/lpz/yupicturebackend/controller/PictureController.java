@@ -16,11 +16,9 @@ import org.lpz.yupicturebackend.exception.BusinessException;
 import org.lpz.yupicturebackend.exception.ErrorCode;
 import org.lpz.yupicturebackend.exception.ThrowUtils;
 import org.lpz.yupicturebackend.manager.CosManager;
+import org.lpz.yupicturebackend.model.PictureReviewStatusEnum;
 import org.lpz.yupicturebackend.model.PictureTagCategory;
-import org.lpz.yupicturebackend.model.dto.picture.PictureEditRequest;
-import org.lpz.yupicturebackend.model.dto.picture.PictureQueryRequest;
-import org.lpz.yupicturebackend.model.dto.picture.PictureUpdateRequest;
-import org.lpz.yupicturebackend.model.dto.picture.PictureUploadRequest;
+import org.lpz.yupicturebackend.model.dto.picture.*;
 import org.lpz.yupicturebackend.model.entity.Picture;
 import org.lpz.yupicturebackend.model.entity.User;
 import org.lpz.yupicturebackend.model.vo.PictureVO;
@@ -55,15 +53,15 @@ public class PictureController {
     private PictureService pictureService;
 
     /**
-     * 上传图片 (可重新上传)
+     * 本地上传图片 (可重新上传)
      * @param multipartFile
      * @param pictureUploadRequest
      * @param request
      * @return
      */
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+//    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     @PostMapping("/upload")
-    public Baseresponse<PictureVO> uploadFile(
+    public Baseresponse<PictureVO> uploadPicture(
             @RequestParam("file")MultipartFile multipartFile,
             PictureUploadRequest pictureUploadRequest,
             HttpServletRequest request) {
@@ -73,6 +71,47 @@ public class PictureController {
         PictureVO pictureVO = pictureService.uploadPicture(multipartFile, pictureUploadRequest, loginUser);
 
         return ResultUtils.success(pictureVO);
+
+    }
+
+    /**
+     * 通过url上传图片 (可重新上传)
+     * @param pictureUploadRequest
+     * @param request
+     * @return
+     */
+//    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @PostMapping("/upload/url")
+    public Baseresponse<PictureVO> uploadPictureByUrl(
+            @RequestBody PictureUploadRequest pictureUploadRequest,
+            HttpServletRequest request) {
+        ThrowUtils.throwIf(pictureUploadRequest == null || request == null,ErrorCode.PARAMS_ERROR,"请求参数为空");
+
+        User loginUser = userService.getLoginUser(request);
+        String fileUrl = pictureUploadRequest.getFileUrl();
+        PictureVO pictureVO = pictureService.uploadPicture(fileUrl, pictureUploadRequest, loginUser);
+
+        return ResultUtils.success(pictureVO);
+
+    }
+
+    /**
+     * 审核图片（仅管理员）
+     * @param pictureReviewRequest
+     * @param request
+     * @return
+     */
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @PostMapping("/review")
+    public Baseresponse<Boolean> doPictureReview(
+            PictureReviewRequest pictureReviewRequest,
+            HttpServletRequest request) {
+        ThrowUtils.throwIf(pictureReviewRequest == null || request == null,ErrorCode.PARAMS_ERROR,"请求参数为空");
+
+        User loginUser = userService.getLoginUser(request);
+        pictureService.doPictureReview(pictureReviewRequest,loginUser);
+
+        return ResultUtils.success(true);
 
     }
 
@@ -112,7 +151,7 @@ public class PictureController {
      */
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     @PostMapping("/update")
-    public Baseresponse<Boolean> updatePicture(@RequestBody PictureUpdateRequest pictureUpdateRequest) {
+    public Baseresponse<Boolean> updatePicture(@RequestBody PictureUpdateRequest pictureUpdateRequest,HttpServletRequest request) {
         ThrowUtils.throwIf(pictureUpdateRequest == null,ErrorCode.PARAMS_ERROR);
 
         // 将实体类和DTO进行转换
@@ -129,6 +168,9 @@ public class PictureController {
         Long id = picture.getId();
         Picture picture1 = pictureService.getById(id);
         ThrowUtils.throwIf(picture1 == null,ErrorCode.NOT_FOUND_ERROR);
+
+        // 补充审核状态参数
+        pictureService.fillReviewParams(picture,userService.getLoginUser(request));
 
         //操作数据库
         boolean b = pictureService.updateById(picture);
@@ -160,7 +202,10 @@ public class PictureController {
         ThrowUtils.throwIf(id <= 0,ErrorCode.PARAMS_ERROR);
         Picture picture = pictureService.getById(id);
         ThrowUtils.throwIf(picture == null,ErrorCode.NOT_FOUND_ERROR);
-        return ResultUtils.success(PictureVO.objToVo(picture));
+        PictureVO pictureVO = PictureVO.objToVo(picture);
+        User user = userService.getById(pictureVO.getUserId());
+        pictureVO.setUser(userService.getUserVO(user));
+        return ResultUtils.success(pictureVO);
     }
 
     /**
@@ -187,7 +232,6 @@ public class PictureController {
      * @param pictureQueryRequest
      * @return
      */
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     @PostMapping("/list/page/vo")
     public Baseresponse<Page<PictureVO>> listPictureVOByPage(@RequestBody PictureQueryRequest pictureQueryRequest,HttpServletRequest request) {
         ThrowUtils.throwIf(pictureQueryRequest == null || request == null,ErrorCode.PARAMS_ERROR);
@@ -197,6 +241,8 @@ public class PictureController {
         // 限制爬虫
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
 
+        // 普通用户只能看到已通过审核的图片
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
         QueryWrapper<Picture> queryWrapper = pictureService.getQueryWrapper(pictureQueryRequest);
         Page<Picture> picturePage = pictureService.page(new Page<>(current, size), queryWrapper);
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage,request));
@@ -227,9 +273,12 @@ public class PictureController {
 
         // 仅本人和管理员可编辑
         User user = userService.getLoginUser(request);
-        if (!picture.getUserId().equals(user.getId()) && !userService.isAdmin(user)) {
+        if (!picture1.getUserId().equals(user.getId()) && !userService.isAdmin(user)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
+
+        // 补充审核状态参数
+        pictureService.fillReviewParams(picture,user);
 
         // 操作数据库
         boolean b = pictureService.updateById(picture);

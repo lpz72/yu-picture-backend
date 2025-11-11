@@ -302,6 +302,26 @@ public class PictureController {
         return ResultUtils.success(pictureTagCategory);
     }
 
+    /**
+     * 批量上传图片（仅管理员）
+     * @param pictureUploadByBatchRequest
+     * @param request
+     * @return
+     */
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @PostMapping("/upload/batch")
+    public Baseresponse<Integer> uploadPictureByBatch(
+            PictureUploadByBatchRequest pictureUploadByBatchRequest,
+            HttpServletRequest request) {
+        ThrowUtils.throwIf(pictureUploadByBatchRequest == null || request == null,ErrorCode.PARAMS_ERROR,"请求参数为空");
+
+        User loginUser = userService.getLoginUser(request);
+        int count = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, loginUser);
+
+        return ResultUtils.success(count);
+
+    }
+
 
 
 

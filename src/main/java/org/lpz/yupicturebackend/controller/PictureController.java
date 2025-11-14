@@ -1,8 +1,12 @@
 package org.lpz.yupicturebackend.controller;
 
+import cn.hutool.core.util.RandomUtil;
+import cn.hutool.crypto.digest.DigestUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.qcloud.cos.model.COSObject;
 import com.qcloud.cos.model.COSObjectInputStream;
 import com.qcloud.cos.utils.IOUtils;
@@ -25,6 +29,9 @@ import org.lpz.yupicturebackend.model.vo.PictureVO;
 import org.lpz.yupicturebackend.service.PictureService;
 import org.lpz.yupicturebackend.service.UserService;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -33,10 +40,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/picture")
@@ -52,6 +57,18 @@ public class PictureController {
     @Resource
     private PictureService pictureService;
 
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
+
+
+    private final Cache<String, String> LOCAL_CACHE =
+            Caffeine.newBuilder().initialCapacity(1024)
+                    .maximumSize(10000L)
+                    // 缓存 5 分钟移除
+                    .expireAfterWrite(5L, TimeUnit.MINUTES)
+                    .build();
+
+
     /**
      * 本地上传图片 (可重新上传)
      * @param multipartFile
@@ -66,6 +83,9 @@ public class PictureController {
             PictureUploadRequest pictureUploadRequest,
             HttpServletRequest request) {
         ThrowUtils.throwIf(multipartFile == null || request == null,ErrorCode.PARAMS_ERROR,"请求参数为空");
+
+        // 清理缓存
+        pictureService.deleteCacheKeys(LOCAL_CACHE);
 
         User loginUser = userService.getLoginUser(request);
         PictureVO pictureVO = pictureService.uploadPicture(multipartFile, pictureUploadRequest, loginUser);
@@ -86,6 +106,9 @@ public class PictureController {
             @RequestBody PictureUploadRequest pictureUploadRequest,
             HttpServletRequest request) {
         ThrowUtils.throwIf(pictureUploadRequest == null || request == null,ErrorCode.PARAMS_ERROR,"请求参数为空");
+
+        // 清理缓存
+        pictureService.deleteCacheKeys(LOCAL_CACHE);
 
         User loginUser = userService.getLoginUser(request);
         String fileUrl = pictureUploadRequest.getFileUrl();
@@ -137,6 +160,9 @@ public class PictureController {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
 
+        // 清理缓存
+        pictureService.deleteCacheKeys(LOCAL_CACHE);
+
         boolean b = pictureService.removeById(id);
         ThrowUtils.throwIf(!b,ErrorCode.OPERATION_ERROR,"删除失败");
 
@@ -175,6 +201,10 @@ public class PictureController {
         //操作数据库
         boolean b = pictureService.updateById(picture);
         ThrowUtils.throwIf(!b,ErrorCode.OPERATION_ERROR,"操作失败");
+
+        // 清理缓存
+        pictureService.deleteCacheKeys(LOCAL_CACHE);
+
         return ResultUtils.success(b);
     }
 
@@ -250,6 +280,63 @@ public class PictureController {
     }
 
     /**
+     * 分页获取图片列表（封装类，缓存）
+     * @param pictureQueryRequest
+     * @return
+     */
+    @PostMapping("/list/page/vo/cache")
+    public Baseresponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,HttpServletRequest request) {
+        ThrowUtils.throwIf(pictureQueryRequest == null || request == null,ErrorCode.PARAMS_ERROR);
+
+        int current = pictureQueryRequest.getCurrent();
+        int size = pictureQueryRequest.getPageSize();
+        // 限制爬虫
+        ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+
+        // 普通用户只能看到已通过审核的图片
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+
+        ValueOperations<String, String> opsForValue = stringRedisTemplate.opsForValue();
+
+        // 将查询条件转换成json字符串
+        String query = JSONUtil.toJsonStr(pictureQueryRequest);
+        // 构造缓存key，进行MD5加密，避免key过长
+        String key = "yupicture:listPictureVOByPage:" + DigestUtils.md5DigestAsHex(query.getBytes());
+        // 1. 先访问本地缓存
+        String cache = LOCAL_CACHE.getIfPresent(key);
+        if (cache != null) {
+            // 本地有缓存，则直接返回
+            Page<PictureVO> pictureVOPage = JSONUtil.toBean(cache, Page.class);
+            return ResultUtils.success(pictureVOPage);
+        }
+
+        // 2. 本地没缓存，则访问redis缓存
+        cache = opsForValue.get(key);
+        if (cache != null) {
+            // redis有缓存，则直接返回，并存入本地缓存
+            LOCAL_CACHE.put(key,cache);
+            Page<PictureVO> pictureVOPage = JSONUtil.toBean(cache, Page.class);
+            return ResultUtils.success(pictureVOPage);
+        }
+
+        // 3. redis也没有缓存，则访问数据库
+        Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
+                pictureService.getQueryWrapper(pictureQueryRequest));
+        Page<PictureVO> pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
+
+        // 4. 更新缓存
+        // redis 设置缓存，过期时间为5 - 10分钟，避免缓存雪崩
+        // 加入keys集合，方便后续清理缓存
+        pictureService.addCacheKey(key);
+        String cacheValue = JSONUtil.toJsonStr(pictureVOPage);
+        opsForValue.set(key,cacheValue,300 + RandomUtil.randomInt(0,300), TimeUnit.SECONDS);
+        // 同时设置caffeine本地缓存
+        LOCAL_CACHE.put(key,cacheValue);
+        return ResultUtils.success(pictureVOPage);
+
+    }
+
+    /**
      * 编辑图片（给用户用）
      * @param pictureEditRequest
      * @param request
@@ -283,6 +370,9 @@ public class PictureController {
         // 操作数据库
         boolean b = pictureService.updateById(picture);
         ThrowUtils.throwIf(!b,ErrorCode.OPERATION_ERROR,"更新失败");
+
+        // 清理缓存
+        pictureService.deleteCacheKeys(LOCAL_CACHE);
 
         return ResultUtils.success(true);
 
@@ -322,7 +412,7 @@ public class PictureController {
 
     }
 
-
+    
 
 
 }

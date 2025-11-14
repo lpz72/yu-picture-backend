@@ -5,12 +5,21 @@ server:
 spring:
   application:
     name: yu-picture-backend
+#  profiles:
+#    active: local
   # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/yu_picture
     username: root
     password: lpz2003...
+  # redis配置
+  redis:
+    database: 0
+    host: 127.0.0.1
+    port: 6379
+    timeout: 5000
+
   # 开放更大的文件上传体积
   servlet:
     multipart:

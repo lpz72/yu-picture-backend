@@ -410,5 +410,27 @@ public class PictureController {
 
     }
 
+    /**
+     * 批量修改图片
+     *
+     * @param pictureEditByBatchRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/edit/batch")
+    public Baseresponse<Boolean> PictureEditByBatch(@RequestBody PictureEditByBatchRequest pictureEditByBatchRequest, HttpServletRequest request) {
+
+        ThrowUtils.throwIf(pictureEditByBatchRequest == null || request == null, ErrorCode.PARAMS_ERROR);
+
+        User loginUser = userService.getLoginUser(request);
+
+        pictureService.pictureEditByBatch(pictureEditByBatchRequest,loginUser);
+        // 清理缓存
+        pictureService.deleteCacheKeys(LOCAL_CACHE);
+
+        return ResultUtils.success(true);
+
+    }
+
 
 }

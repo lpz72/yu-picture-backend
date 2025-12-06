@@ -1,4 +1,4 @@
-package org.lpz.yupicturebackend.model;
+package org.lpz.yupicturebackend.model.enums;
 
 import cn.hutool.core.util.ObjUtil;
 import lombok.Getter;

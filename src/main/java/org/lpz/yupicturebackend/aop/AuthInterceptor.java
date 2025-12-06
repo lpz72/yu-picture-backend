@@ -7,7 +7,7 @@ import org.lpz.yupicturebackend.annotation.AuthCheck;
 import org.lpz.yupicturebackend.exception.BusinessException;
 import org.lpz.yupicturebackend.exception.ErrorCode;
 import org.lpz.yupicturebackend.exception.ThrowUtils;
-import org.lpz.yupicturebackend.model.UserRoleEnum;
+import org.lpz.yupicturebackend.model.enums.UserRoleEnum;
 import org.lpz.yupicturebackend.model.entity.User;
 import org.lpz.yupicturebackend.service.UserService;
 import org.springframework.stereotype.Component;

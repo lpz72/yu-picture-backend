@@ -100,7 +100,11 @@
             <version>2.9.3</version>
         </dependency>
 
-
+        <!-- Spring Session + Redis -->
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-data-redis</artifactId>
+        </dependency>
 
 
     </dependencies>

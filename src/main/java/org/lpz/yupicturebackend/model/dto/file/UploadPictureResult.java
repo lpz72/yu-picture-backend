@@ -10,13 +10,24 @@ public class UploadPictureResult {
   
     /**  
      * 图片地址  
-     */  
-    private String url;  
-  
+     */
+    private String url;
+
+    /**
+     * 缩略图地址
+     */
+    private String thumbnailUrl;
+
     /**  
      * 图片名称  
-     */  
-    private String picName;  
+     */
+    private String picName;
+
+    /**
+     * 图片主色调
+     */
+
+    private String picColor;
   
     /**  
      * 文件体积  

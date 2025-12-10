@@ -53,6 +53,10 @@ public abstract class PictureUploadTemplate {
         // 2. 图片上传地址
         String uuid = RandomUtil.randomString(16);
         String filename = getOriginalFilename(inputSource);
+        // AI扩图后，返回的地址会在格式(如jpg)后面加上?和一串参数
+        if (filename.contains("?")){
+            filename = filename.substring(0, filename.indexOf("?"));
+        }
         String fileSuffix = FileUtil.getSuffix(filename);
         String uploadFileName = String.format("%s_%s.%s", DateUtil.formatDate(new Date()),uuid,fileSuffix);
 
@@ -97,17 +101,17 @@ public abstract class PictureUploadTemplate {
 
     private UploadPictureResult buildResult(ImageInfo imageInfo, String fileName, CIObject compressCiObject, CIObject thumbnailCiObject) {
         UploadPictureResult uploadPictureResult = new UploadPictureResult();
-        int picWidth = thumbnailCiObject.getWidth();
-        int picHeight = thumbnailCiObject.getHeight();
+        int picWidth = compressCiObject.getWidth();
+        int picHeight = compressCiObject.getHeight();
         double picScale = NumberUtil.round(picWidth * 1.0 / picHeight,2).doubleValue();
         uploadPictureResult.setUrl(cosClientConfig.getHost() + "/" + compressCiObject.getKey());
         uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() + "/" + thumbnailCiObject.getKey());
         uploadPictureResult.setPicName(FileUtil.mainName(fileName));
-        uploadPictureResult.setPicSize(thumbnailCiObject.getSize().longValue());
+        uploadPictureResult.setPicSize(compressCiObject.getSize().longValue());
         uploadPictureResult.setPicWidth(picWidth);
         uploadPictureResult.setPicHeight(picHeight);
         uploadPictureResult.setPicScale(picScale);
-        uploadPictureResult.setPicFormat(thumbnailCiObject.getFormat());
+        uploadPictureResult.setPicFormat(compressCiObject.getFormat());
         // 获取图片主色调
         uploadPictureResult.setPicColor(imageInfo.getAve());
         return uploadPictureResult;

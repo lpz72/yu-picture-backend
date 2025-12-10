@@ -55,7 +55,8 @@ public class UrlPictureUpload extends PictureUploadTemplate{
         // 3. 发送HEAD请求以验证文件是否存在
         HttpResponse response = null;
         try {
-            response = HttpUtil.createRequest(Method.HEAD, fileUrl).execute();
+//            response = HttpUtil.createRequest(Method.HEAD, fileUrl).execute();
+            response = HttpUtil.createRequest(Method.GET, fileUrl).execute();
             // 为正常返回，无需其他操作
             if (response == null) {
                 return;
@@ -71,8 +72,8 @@ public class UrlPictureUpload extends PictureUploadTemplate{
             String contentLengthStr = response.header("Content-Length");
             if (StrUtil.isNotBlank(contentLengthStr)) {
                 long contentLength = Long.parseLong(contentLengthStr);
-                final long MAX_SIZE = 2 * 1024 * 1024; // 2MB
-                ThrowUtils.throwIf(contentLength > MAX_SIZE,ErrorCode.PARAMS_ERROR,"文件大小不能超过2MB");
+                final long MAX_SIZE = 10 * 1024 * 1024; // 10MB
+                ThrowUtils.throwIf(contentLength > MAX_SIZE,ErrorCode.PARAMS_ERROR,"文件大小不能超过10MB");
             }
         } finally {
             if (response != null) {

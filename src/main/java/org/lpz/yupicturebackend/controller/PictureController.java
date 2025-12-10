@@ -8,6 +8,9 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
 import org.lpz.yupicturebackend.annotation.AuthCheck;
+import org.lpz.yupicturebackend.api.aliyunai.AliYunAiApi;
+import org.lpz.yupicturebackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
+import org.lpz.yupicturebackend.api.aliyunai.model.GetOutPaintingTaskResponse;
 import org.lpz.yupicturebackend.api.imagesearch.ImageSearchApiFacade;
 import org.lpz.yupicturebackend.api.imagesearch.model.ImageSearchResult;
 import org.lpz.yupicturebackend.common.Baseresponse;
@@ -67,6 +70,8 @@ public class PictureController {
                     .build();
     @Autowired
     private SpaceService spaceService;
+    @Autowired
+    private AliYunAiApi aliYunAiApi;
 
 
     /**
@@ -85,7 +90,7 @@ public class PictureController {
         ThrowUtils.throwIf(multipartFile == null || request == null,ErrorCode.PARAMS_ERROR,"请求参数为空");
 
         // 清理缓存
-        pictureService.deleteCacheKeys(LOCAL_CACHE);
+        pictureService.deleteCacheKeys(stringRedisTemplate, LOCAL_CACHE);
 
         User loginUser = userService.getLoginUser(request);
         PictureVO pictureVO = pictureService.uploadPicture(multipartFile, pictureUploadRequest, loginUser);
@@ -108,7 +113,7 @@ public class PictureController {
         ThrowUtils.throwIf(pictureUploadRequest == null || request == null,ErrorCode.PARAMS_ERROR,"请求参数为空");
 
         // 清理缓存
-        pictureService.deleteCacheKeys(LOCAL_CACHE);
+        pictureService.deleteCacheKeys(stringRedisTemplate, LOCAL_CACHE);
 
         User loginUser = userService.getLoginUser(request);
         String fileUrl = pictureUploadRequest.getFileUrl();
@@ -149,8 +154,9 @@ public class PictureController {
         ThrowUtils.throwIf(deleteRequest == null || request == null,ErrorCode.PARAMS_ERROR);
 
         User user = userService.getLoginUser(request);
-        pictureService.deletePicture(deleteRequest.getId(), user, LOCAL_CACHE);
-
+        pictureService.deletePicture(deleteRequest.getId(), user);
+        // 清除缓存
+        pictureService.deleteCacheKeys(stringRedisTemplate, LOCAL_CACHE);
         return ResultUtils.success(true);
 
     }
@@ -166,7 +172,9 @@ public class PictureController {
         ThrowUtils.throwIf(pictureUpdateRequest == null,ErrorCode.PARAMS_ERROR);
 
         User loginUser = userService.getLoginUser(request);
-        pictureService.updatePicture(pictureUpdateRequest, loginUser, LOCAL_CACHE);
+        pictureService.updatePicture(pictureUpdateRequest, loginUser);
+        // 清除缓存
+        pictureService.deleteCacheKeys(stringRedisTemplate, LOCAL_CACHE);
 
         return ResultUtils.success(true);
     }
@@ -326,7 +334,9 @@ public class PictureController {
     public Baseresponse<Boolean> editPicture(@RequestBody PictureEditRequest pictureEditRequest,HttpServletRequest request) {
         ThrowUtils.throwIf(pictureEditRequest == null || request == null,ErrorCode.PARAMS_ERROR);
         User user = userService.getLoginUser(request);
-        pictureService.editPicture(pictureEditRequest, user, LOCAL_CACHE);
+        pictureService.editPicture(pictureEditRequest, user);
+        // 清除缓存
+        pictureService.deleteCacheKeys(stringRedisTemplate, LOCAL_CACHE);
         return ResultUtils.success(true);
 
     }
@@ -360,6 +370,7 @@ public class PictureController {
 
         User loginUser = userService.getLoginUser(request);
         int count = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, loginUser);
+        pictureService.deleteCacheKeys(stringRedisTemplate, LOCAL_CACHE);
 
         return ResultUtils.success(count);
 
@@ -426,9 +437,42 @@ public class PictureController {
 
         pictureService.pictureEditByBatch(pictureEditByBatchRequest,loginUser);
         // 清理缓存
-        pictureService.deleteCacheKeys(LOCAL_CACHE);
+        pictureService.deleteCacheKeys(stringRedisTemplate, LOCAL_CACHE);
 
         return ResultUtils.success(true);
+
+    }
+
+    /**
+     * 创建AI扩图任务
+     * @param createPictureOutPaintingTaskRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/out_painting/create_task")
+    public Baseresponse<CreateOutPaintingTaskResponse> createPictureOutPaintingTask(@RequestBody CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, HttpServletRequest request) {
+
+        ThrowUtils.throwIf(createPictureOutPaintingTaskRequest == null || request == null, ErrorCode.PARAMS_ERROR);
+
+        User loginUser = userService.getLoginUser(request);
+
+        CreateOutPaintingTaskResponse pictureOutPaintingTask = pictureService.createPictureOutPaintingTask(createPictureOutPaintingTaskRequest, loginUser);
+
+        return ResultUtils.success(pictureOutPaintingTask);
+
+    }
+
+    /**
+     * 查询AI扩图任务
+     * @param taskId
+     * @return
+     */
+    @GetMapping("/out_painting/get_task")
+    public Baseresponse<GetOutPaintingTaskResponse> getPictureOutPaintingTask(String taskId) {
+
+        ThrowUtils.throwIf(taskId == null, ErrorCode.PARAMS_ERROR);
+
+        return ResultUtils.success(aliYunAiApi.getOutPaintingTask(taskId));
 
     }
 

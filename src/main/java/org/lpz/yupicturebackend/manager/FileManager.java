@@ -93,7 +93,7 @@ public class FileManager {
         // 1.校验图片大小
         long fileSize = multipartFile.getSize();
         final long MAX_SIZE = 1024 * 1024;
-        ThrowUtils.throwIf(fileSize > 2 * MAX_SIZE,ErrorCode.PARAMS_ERROR,"文件大小不能超过2MB");
+        ThrowUtils.throwIf(fileSize > 10 * MAX_SIZE,ErrorCode.PARAMS_ERROR,"文件大小不能超过10MB");
         // 2.校验文件后缀
         String fileSuffix = FileUtil.getSuffix(multipartFile.getOriginalFilename());
         // 允许上传的文件后缀

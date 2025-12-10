@@ -69,8 +69,13 @@ public abstract class PictureUploadTemplate {
             processFile(inputSource,file);
             // 4. 上传图片到对象存储
             PutObjectResult putObjectResult = cosManager.putPictureObject(uploadFilepath, file);
+
             // 获取图片主色调
             String color = cosManager.getImageAve(uploadFilepath);
+
+            // 删除原图
+            String originalUrl = putObjectResult.getCiUploadResult().getOriginalInfo().getKey();
+            cosManager.deleteObject(originalUrl);
             ImageInfo imageInfo = putObjectResult.getCiUploadResult().getOriginalInfo().getImageInfo();
             imageInfo.setAve(color);
             ProcessResults processResults = putObjectResult.getCiUploadResult().getProcessResults();

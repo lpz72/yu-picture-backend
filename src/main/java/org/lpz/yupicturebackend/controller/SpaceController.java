@@ -178,8 +178,8 @@ public class SpaceController {
         ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
 
         User user = userService.getLoginUser(request);
-        // 验证权限，只能获取自己的空间
-        ThrowUtils.throwIf(!space.getUserId().equals(user.getId()), ErrorCode.NO_AUTH_ERROR, "获取数据失败，没有空间权限");
+        // 验证权限，非管理员只能获取自己的空间
+        ThrowUtils.throwIf(!space.getUserId().equals(user.getId()) && !userService.isAdmin(user), ErrorCode.NO_AUTH_ERROR, "获取数据失败，没有空间权限");
         SpaceVO spaceVO = SpaceVO.objToVo(space);
         spaceVO.setUser(userService.getUserVO(user));
         return ResultUtils.success(spaceVO);

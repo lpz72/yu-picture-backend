@@ -300,7 +300,8 @@ public class PictureController {
             User loginUser = userService.getLoginUser(request);
             Space space = spaceService.getById(spaceId);
             ThrowUtils.throwIf(space == null, ErrorCode.PARAMS_ERROR, "空间不存在");
-            ThrowUtils.throwIf(!loginUser.getId().equals(space.getUserId()), ErrorCode.NO_AUTH_ERROR, "没有空间权限");
+            // 仅空间管理员和管理员可以查看空间内的图片
+            ThrowUtils.throwIf(!loginUser.getId().equals(space.getUserId()) && !userService.isAdmin(loginUser), ErrorCode.NO_AUTH_ERROR, "没有空间权限");
         } else {
             // 访问公共图库
             // 普通用户只能看到已通过审核的图片
@@ -475,6 +476,8 @@ public class PictureController {
         return ResultUtils.success(aliYunAiApi.getOutPaintingTask(taskId));
 
     }
+
+
 
 
 }

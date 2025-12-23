@@ -1,14 +1,11 @@
 package org.lpz.yupicturebackend.controller;
 
-import cn.hutool.core.util.RandomUtil;
-import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
 import org.lpz.yupicturebackend.annotation.AuthCheck;
-import org.lpz.yupicturebackend.common.Baseresponse;
+import org.lpz.yupicturebackend.auth.SpaceUserAuthManager;
+import org.lpz.yupicturebackend.common.BaseResponse;
 import org.lpz.yupicturebackend.common.DeleteRequest;
 import org.lpz.yupicturebackend.common.ResultUtils;
 import org.lpz.yupicturebackend.constant.UserConstant;
@@ -16,29 +13,19 @@ import org.lpz.yupicturebackend.exception.BusinessException;
 import org.lpz.yupicturebackend.exception.ErrorCode;
 import org.lpz.yupicturebackend.exception.ThrowUtils;
 import org.lpz.yupicturebackend.manager.CosManager;
-import org.lpz.yupicturebackend.model.PictureTagCategory;
-import org.lpz.yupicturebackend.model.dto.picture.*;
 import org.lpz.yupicturebackend.model.dto.space.SpaceAddRequest;
 import org.lpz.yupicturebackend.model.dto.space.SpaceEditRequest;
 import org.lpz.yupicturebackend.model.dto.space.SpaceQueryRequest;
 import org.lpz.yupicturebackend.model.dto.space.SpaceUpdateRequest;
-import org.lpz.yupicturebackend.model.entity.Picture;
 import org.lpz.yupicturebackend.model.entity.Space;
 import org.lpz.yupicturebackend.model.entity.User;
-import org.lpz.yupicturebackend.model.enums.PictureReviewStatusEnum;
 import org.lpz.yupicturebackend.model.enums.SpaceLevelEnum;
-import org.lpz.yupicturebackend.model.vo.PictureVO;
 import org.lpz.yupicturebackend.model.vo.SpaceLevel;
 import org.lpz.yupicturebackend.model.vo.SpaceVO;
-import org.lpz.yupicturebackend.service.PictureService;
 import org.lpz.yupicturebackend.service.SpaceService;
 import org.lpz.yupicturebackend.service.UserService;
 import org.springframework.beans.BeanUtils;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -46,7 +33,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @RestController
@@ -63,6 +49,9 @@ public class SpaceController {
     @Resource
     private SpaceService spaceService;
 
+    @Resource
+    private SpaceUserAuthManager spaceUserAuthManager;
+
     /**
      * 创建私有空间
      *
@@ -71,7 +60,7 @@ public class SpaceController {
      * @return
      */
     @PostMapping("/upload")
-    public Baseresponse<Long> uploadSpace(
+    public BaseResponse<Long> uploadSpace(
             SpaceAddRequest spaceAddRequest,
             HttpServletRequest request) {
         ThrowUtils.throwIf(spaceAddRequest == null || request == null, ErrorCode.PARAMS_ERROR, "请求参数为空");
@@ -92,7 +81,7 @@ public class SpaceController {
      * @return
      */
     @PostMapping("/delete")
-    public Baseresponse<Boolean> deleteSpace(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
+    public BaseResponse<Boolean> deleteSpace(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(deleteRequest == null || request == null, ErrorCode.PARAMS_ERROR);
 
         // 判断是否存在该空间
@@ -124,7 +113,7 @@ public class SpaceController {
      */
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     @PostMapping("/update")
-    public Baseresponse<Boolean> updateSpace(@RequestBody SpaceUpdateRequest spaceUpdateRequest, HttpServletRequest request) {
+    public BaseResponse<Boolean> updateSpace(@RequestBody SpaceUpdateRequest spaceUpdateRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(spaceUpdateRequest == null, ErrorCode.PARAMS_ERROR);
 
         // 将实体类和DTO进行转换
@@ -158,7 +147,7 @@ public class SpaceController {
      */
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     @GetMapping("/get")
-    public Baseresponse<Space> getSpaceById(long id) {
+    public BaseResponse<Space> getSpaceById(long id) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         Space space = spaceService.getById(id);
         ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
@@ -172,7 +161,7 @@ public class SpaceController {
      * @return
      */
     @GetMapping("/get/vo")
-    public Baseresponse<SpaceVO> getSpaceVOById(long id, HttpServletRequest request) {
+    public BaseResponse<SpaceVO> getSpaceVOById(long id, HttpServletRequest request) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         Space space = spaceService.getById(id);
         ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
@@ -182,6 +171,11 @@ public class SpaceController {
         ThrowUtils.throwIf(!space.getUserId().equals(user.getId()) && !userService.isAdmin(user), ErrorCode.NO_AUTH_ERROR, "获取数据失败，没有空间权限");
         SpaceVO spaceVO = SpaceVO.objToVo(space);
         spaceVO.setUser(userService.getUserVO(user));
+
+        // 设置权限列表
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, user);
+        spaceVO.setPermissionList(permissionList);
+
         return ResultUtils.success(spaceVO);
     }
 
@@ -193,7 +187,7 @@ public class SpaceController {
      */
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     @PostMapping("/list/page")
-    public Baseresponse<Page<Space>> listSpaceByPage(@RequestBody SpaceQueryRequest spaceQueryRequest) {
+    public BaseResponse<Page<Space>> listSpaceByPage(@RequestBody SpaceQueryRequest spaceQueryRequest) {
         ThrowUtils.throwIf(spaceQueryRequest == null, ErrorCode.PARAMS_ERROR);
 
         int current = spaceQueryRequest.getCurrent();
@@ -212,7 +206,7 @@ public class SpaceController {
      * @return
      */
     @PostMapping("/list/page/vo")
-    public Baseresponse<Page<SpaceVO>> listSpaceVOByPage(@RequestBody SpaceQueryRequest spaceQueryRequest, HttpServletRequest request) {
+    public BaseResponse<Page<SpaceVO>> listSpaceVOByPage(@RequestBody SpaceQueryRequest spaceQueryRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(spaceQueryRequest == null || request == null, ErrorCode.PARAMS_ERROR);
 
         int current = spaceQueryRequest.getCurrent();
@@ -232,7 +226,7 @@ public class SpaceController {
      * @return
      */
     @GetMapping("/list/level")
-    public Baseresponse<List<SpaceLevel>> listSpaceLevel() {
+    public BaseResponse<List<SpaceLevel>> listSpaceLevel() {
 
         List<SpaceLevel> values = Arrays.stream(SpaceLevelEnum.values())
                 .map(space -> new SpaceLevel(
@@ -255,7 +249,7 @@ public class SpaceController {
      * @return
      */
     @PostMapping("/edit")
-    public Baseresponse<Boolean> editSpace(@RequestBody SpaceEditRequest spaceEditRequest, HttpServletRequest request) {
+    public BaseResponse<Boolean> editSpace(@RequestBody SpaceEditRequest spaceEditRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(spaceEditRequest == null || request == null, ErrorCode.PARAMS_ERROR);
         // 转换
         Space space = new Space();

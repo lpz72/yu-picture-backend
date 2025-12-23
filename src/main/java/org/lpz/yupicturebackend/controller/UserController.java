@@ -1,15 +1,13 @@
 package org.lpz.yupicturebackend.controller;
 
-import cn.hutool.log.Log;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.lpz.yupicturebackend.annotation.AuthCheck;
-import org.lpz.yupicturebackend.common.Baseresponse;
+import org.lpz.yupicturebackend.common.BaseResponse;
 import org.lpz.yupicturebackend.common.DeleteRequest;
 import org.lpz.yupicturebackend.common.ResultUtils;
 import org.lpz.yupicturebackend.constant.UserConstant;
 import org.lpz.yupicturebackend.exception.ErrorCode;
 import org.lpz.yupicturebackend.exception.ThrowUtils;
-import org.lpz.yupicturebackend.mapper.UserMapper;
 import org.lpz.yupicturebackend.model.dto.user.*;
 import org.lpz.yupicturebackend.model.entity.User;
 import org.lpz.yupicturebackend.model.vo.LoginUserVO;
@@ -30,7 +28,7 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/register")
-    public Baseresponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
+    public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
         ThrowUtils.throwIf(userRegisterRequest == null, ErrorCode.PARAMS_ERROR);
         String userAccount = userRegisterRequest.getUserAccount();
         String userPassword = userRegisterRequest.getUserPassword();
@@ -40,7 +38,7 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public Baseresponse<LoginUserVO> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request){
+    public BaseResponse<LoginUserVO> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request){
         ThrowUtils.throwIf(request == null,ErrorCode.PARAMS_ERROR);
         String userAccount = userLoginRequest.getUserAccount();
         String userPassword = userLoginRequest.getUserPassword();
@@ -49,14 +47,14 @@ public class UserController {
     }
 
     @GetMapping("/get/login")
-    public Baseresponse<LoginUserVO> getLoginUser(HttpServletRequest request) {
+    public BaseResponse<LoginUserVO> getLoginUser(HttpServletRequest request) {
         ThrowUtils.throwIf(request == null,ErrorCode.PARAMS_ERROR);
         User loginUser = userService.getLoginUser(request);
         return ResultUtils.success(userService.getLoginUserVO(loginUser));
     }
 
     @PostMapping("/logout")
-    public Baseresponse<Boolean> userLogout(HttpServletRequest request) {
+    public BaseResponse<Boolean> userLogout(HttpServletRequest request) {
         ThrowUtils.throwIf(request == null,ErrorCode.PARAMS_ERROR);
         return ResultUtils.success(userService.userLogout(request));
     }
@@ -69,7 +67,7 @@ public class UserController {
      */
     @PostMapping("/add")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public Baseresponse<Long> addUser(@RequestBody UserAddRequest userAddRequest) {
+    public BaseResponse<Long> addUser(@RequestBody UserAddRequest userAddRequest) {
 
         ThrowUtils.throwIf(userAddRequest == null,ErrorCode.PARAMS_ERROR,"请求参数为空");
 
@@ -90,7 +88,7 @@ public class UserController {
      */
     @GetMapping("/get")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public Baseresponse<User> getUserById(long id) {
+    public BaseResponse<User> getUserById(long id) {
         ThrowUtils.throwIf(id <= 0,ErrorCode.PARAMS_ERROR);
 
         User user = userService.getById(id);
@@ -106,7 +104,7 @@ public class UserController {
      */
     @PostMapping("/delete")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public Baseresponse<Boolean> deleteUser(@RequestBody DeleteRequest deleteRequest) {
+    public BaseResponse<Boolean> deleteUser(@RequestBody DeleteRequest deleteRequest) {
 
         ThrowUtils.throwIf(deleteRequest == null || deleteRequest.getId() <= 0,ErrorCode.PARAMS_ERROR);
 
@@ -122,7 +120,7 @@ public class UserController {
      */
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public Baseresponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest) {
+    public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest) {
 
         ThrowUtils.throwIf(userUpdateRequest == null,ErrorCode.PARAMS_ERROR,"请求参数为空");
 
@@ -140,7 +138,7 @@ public class UserController {
      * @return
      */
     @GetMapping("/get/vo")
-    public Baseresponse<UserVO> getUserVOById(long id) {
+    public BaseResponse<UserVO> getUserVOById(long id) {
         ThrowUtils.throwIf(id <= 0,ErrorCode.PARAMS_ERROR);
 
         User user = userService.getById(id);
@@ -156,7 +154,7 @@ public class UserController {
      */
     @PostMapping("/list/page/vo")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public Baseresponse<Page<UserVO>> listUserVOByPage(@RequestBody UserQueryRequest userQueryRequest) {
+    public BaseResponse<Page<UserVO>> listUserVOByPage(@RequestBody UserQueryRequest userQueryRequest) {
         ThrowUtils.throwIf(userQueryRequest == null,ErrorCode.PARAMS_ERROR);
 
         int current = userQueryRequest.getCurrent();

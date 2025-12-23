@@ -1,6 +1,6 @@
 package org.lpz.yupicturebackend.controller;
 
-import org.lpz.yupicturebackend.common.Baseresponse;
+import org.lpz.yupicturebackend.common.BaseResponse;
 import org.lpz.yupicturebackend.common.ResultUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,7 +15,7 @@ public class MainController {
      * @return
      */
     @GetMapping("/health")
-    public Baseresponse<String> health() {
+    public BaseResponse<String> health() {
         return ResultUtils.success("ok");
     }
 }

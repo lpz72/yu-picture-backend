@@ -1,17 +1,10 @@
 package org.lpz.yupicturebackend.controller;
 
-import com.qcloud.cos.model.COSObject;
-import com.qcloud.cos.model.COSObjectInputStream;
-import com.qcloud.cos.utils.IOUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.lpz.yupicturebackend.annotation.AuthCheck;
-import org.lpz.yupicturebackend.common.Baseresponse;
+import org.lpz.yupicturebackend.common.BaseResponse;
 import org.lpz.yupicturebackend.common.ResultUtils;
-import org.lpz.yupicturebackend.constant.UserConstant;
-import org.lpz.yupicturebackend.exception.BusinessException;
 import org.lpz.yupicturebackend.exception.ErrorCode;
 import org.lpz.yupicturebackend.exception.ThrowUtils;
-import org.lpz.yupicturebackend.manager.CosManager;
 import org.lpz.yupicturebackend.model.dto.space.analyze.*;
 import org.lpz.yupicturebackend.model.entity.Space;
 import org.lpz.yupicturebackend.model.entity.User;
@@ -19,15 +12,10 @@ import org.lpz.yupicturebackend.model.vo.space.analyze.*;
 import org.lpz.yupicturebackend.service.PictureService;
 import org.lpz.yupicturebackend.service.SpaceAnalyzeService;
 import org.lpz.yupicturebackend.service.UserService;
-import org.springframework.http.HttpRequest;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -52,7 +40,7 @@ public class SpaceAnalyzeController {
      * @return
      */
     @PostMapping("/usage")
-    public Baseresponse<SpaceUsageAnalyzeResponse> getSpaceUsageAnalyze(
+    public BaseResponse<SpaceUsageAnalyzeResponse> getSpaceUsageAnalyze(
             @RequestBody SpaceUsageAnalyzeRequest spaceUsageAnalyzeRequest,
             HttpServletRequest request
             ) {
@@ -73,7 +61,7 @@ public class SpaceAnalyzeController {
      * @return
      */
     @PostMapping("/category")
-    public Baseresponse<List<SpaceCategoryAnalyzeResponse>> getSpaceCategoryAnalyze(
+    public BaseResponse<List<SpaceCategoryAnalyzeResponse>> getSpaceCategoryAnalyze(
             @RequestBody SpaceCategoryAnalyzeRequest spaceCategoryAnalyzeRequest,
             HttpServletRequest request
     ) {
@@ -94,7 +82,7 @@ public class SpaceAnalyzeController {
      * @return
      */
     @PostMapping("/tag")
-    public Baseresponse<List<SpaceTagAnalyzeResponse>> getSpaceTagAnalyze(
+    public BaseResponse<List<SpaceTagAnalyzeResponse>> getSpaceTagAnalyze(
             @RequestBody SpaceTagAnalyzeRequest spaceTagAnalyzeRequest,
             HttpServletRequest request
     ) {
@@ -115,7 +103,7 @@ public class SpaceAnalyzeController {
      * @return
      */
     @PostMapping("/size")
-    public Baseresponse<List<SpaceSizeAnalyzeResponse>> getSpaceSizeAnalyze(
+    public BaseResponse<List<SpaceSizeAnalyzeResponse>> getSpaceSizeAnalyze(
             @RequestBody SpaceSizeAnalyzeRequest spaceSizeAnalyzeRequest,
             HttpServletRequest request
     ) {
@@ -136,7 +124,7 @@ public class SpaceAnalyzeController {
      * @return
      */
     @PostMapping("/user")
-    public Baseresponse<List<SpaceUserAnalyzeResponse>> getSpaceUserAnalyze(
+    public BaseResponse<List<SpaceUserAnalyzeResponse>> getSpaceUserAnalyze(
             @RequestBody SpaceUserAnalyzeRequest spaceUserAnalyzeRequest,
             HttpServletRequest request
     ) {
@@ -156,7 +144,7 @@ public class SpaceAnalyzeController {
      * @return
      */
     @PostMapping("/rank")
-    public Baseresponse<List<Space>> getSpaceRankAnalyze(
+    public BaseResponse<List<Space>> getSpaceRankAnalyze(
             @RequestBody SpaceRankAnalyzeRequest spaceRankAnalyzeRequest,
             HttpServletRequest request
     ) {

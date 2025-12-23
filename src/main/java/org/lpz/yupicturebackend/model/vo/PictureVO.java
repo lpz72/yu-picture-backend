@@ -6,6 +6,7 @@ import org.lpz.yupicturebackend.model.entity.Picture;
 import org.springframework.beans.BeanUtils;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -108,6 +109,11 @@ public class PictureVO implements Serializable {
      * 创建用户信息
      */
     private UserVO user;
+
+    /**
+     * 权限列表
+     */
+    private List<String> permissionList = new ArrayList<>();
 
     /**
      * 疯封装类转对象

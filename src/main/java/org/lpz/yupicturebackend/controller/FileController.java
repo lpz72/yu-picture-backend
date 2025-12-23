@@ -5,23 +5,18 @@ import com.qcloud.cos.model.COSObjectInputStream;
 import com.qcloud.cos.utils.IOUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.lpz.yupicturebackend.annotation.AuthCheck;
-import org.lpz.yupicturebackend.common.Baseresponse;
+import org.lpz.yupicturebackend.common.BaseResponse;
 import org.lpz.yupicturebackend.common.ResultUtils;
 import org.lpz.yupicturebackend.constant.UserConstant;
 import org.lpz.yupicturebackend.exception.BusinessException;
 import org.lpz.yupicturebackend.exception.ErrorCode;
-import org.lpz.yupicturebackend.exception.ThrowUtils;
 import org.lpz.yupicturebackend.manager.CosManager;
-import org.lpz.yupicturebackend.model.dto.picture.PictureUploadRequest;
-import org.lpz.yupicturebackend.model.entity.User;
-import org.lpz.yupicturebackend.model.vo.PictureVO;
 import org.lpz.yupicturebackend.service.PictureService;
 import org.lpz.yupicturebackend.service.UserService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
@@ -47,7 +42,7 @@ public class FileController {
      */
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     @PostMapping("/test/upload")
-    public Baseresponse<String> testUploadFile(@RequestParam("file")MultipartFile multipartFile) {
+    public BaseResponse<String> testUploadFile(@RequestParam("file")MultipartFile multipartFile) {
 
         //文件目录
         String filename = multipartFile.getOriginalFilename();

@@ -78,7 +78,7 @@ public class SpaceUserController {
         ThrowUtils.throwIf(oldSpaceUser == null, ErrorCode.NOT_FOUND_ERROR);
 
         // 操作数据库
-        boolean b = spaceService.removeById(id);
+        boolean b = spaceUserService.removeById(id);
         ThrowUtils.throwIf(!b, ErrorCode.OPERATION_ERROR, "删除失败");
 
         return ResultUtils.success(b);
@@ -93,7 +93,7 @@ public class SpaceUserController {
      */
     @PostMapping("/edit")
     @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_VIEW)
-    public BaseResponse<Boolean> editSpace(@RequestBody SpaceUserEditRequest spaceUserEditRequest) {
+    public BaseResponse<Boolean> editSpaceUser(@RequestBody SpaceUserEditRequest spaceUserEditRequest) {
         ThrowUtils.throwIf(spaceUserEditRequest == null || spaceUserEditRequest.getId() <= 0, ErrorCode.PARAMS_ERROR);
 
         // 将实体类和DTO进行转换

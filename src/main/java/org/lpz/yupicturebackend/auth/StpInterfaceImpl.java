@@ -3,6 +3,7 @@ package org.lpz.yupicturebackend.auth;
 import cn.dev33.satoken.stp.StpInterface;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.servlet.ServletUtil;
@@ -122,8 +123,9 @@ public class StpInterfaceImpl implements StpInterface {
                     .one();
 
             ThrowUtils.throwIf(picture == null,ErrorCode.NOT_FOUND_ERROR,"图片不存在");
+            spaceId = picture.getSpaceId();
             // 公共图库
-            if (picture.getSpaceId() == null) {
+            if (spaceId == null) {
                 // 仅本人和管理员可操作，否则仅可查看
                 if (!user.getId().equals(picture.getUserId()) && !userService.isAdmin(user)) {
                     return Collections.singletonList(SpaceUserPermissionConstant.PICTURE_VIEW);
@@ -167,11 +169,11 @@ public class StpInterfaceImpl implements StpInterface {
            return true; // 对象本身为 null
        }
        // 获取对象的所有字段并判断是否都为空
-       return Arrays.stream(ReflectUtil.getFields(Object.class))
+       return Arrays.stream(ReflectUtil.getFields(object.getClass()))
                // 获取每个字段的值
                .map(field -> ReflectUtil.getFieldValue(object, field))
                // 检查是否所有字段都为空
-               .allMatch(ObjUtil::isEmpty);
+               .allMatch(ObjectUtil::isEmpty);
     }
 
 

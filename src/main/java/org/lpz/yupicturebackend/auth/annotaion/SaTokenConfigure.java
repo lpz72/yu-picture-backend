@@ -9,6 +9,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import javax.annotation.PostConstruct;
 
+
 @Configuration
 public class SaTokenConfigure implements WebMvcConfigurer {
 

@@ -232,7 +232,7 @@ public class PictureController {
         pictureVO.setUser(userService.getUserVO(user));
 
         // 获取权限列表
-        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, user);
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, userService.getLoginUser(request));
         pictureVO.setPermissionList(permissionList);
 
         return ResultUtils.success(pictureVO);
@@ -311,6 +311,26 @@ public class PictureController {
         // 限制爬虫
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
 
+        // 判断是否传递了spaceId
+        Long spaceId = pictureQueryRequest.getSpaceId();
+        if (spaceId != null) {
+            // 有传递spaceId，进行权限校验
+            User loginUser = userService.getLoginUser(request);
+            Space space = spaceService.getById(spaceId);
+            ThrowUtils.throwIf(space == null, ErrorCode.PARAMS_ERROR, "空间不存在");
+            // 仅空间管理员和管理员可以查看空间内的图片
+//            ThrowUtils.throwIf(!loginUser.getId().equals(space.getUserId()) && !userService.isAdmin(loginUser), ErrorCode.NO_AUTH_ERROR, "没有空间权限");
+            boolean b = StpKit.SPACE.hasPermission(SpaceUserPermissionConstant.PICTURE_VIEW);
+            ThrowUtils.throwIf(!b,ErrorCode.NO_AUTH_ERROR,"没有空间权限");
+
+        } else {
+            // 访问公共图库
+            // 普通用户只能看到已通过审核的图片
+            pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+            pictureQueryRequest.setNullSpaceId(true);
+
+        }
+
 
         ValueOperations<String, String> opsForValue = stringRedisTemplate.opsForValue();
 
@@ -336,25 +356,6 @@ public class PictureController {
         }
 
         // 3. redis也没有缓存，则访问数据库
-        // 判断是否传递了spaceId
-        Long spaceId = pictureQueryRequest.getSpaceId();
-        if (spaceId != null) {
-            // 有传递spaceId，进行权限校验
-            User loginUser = userService.getLoginUser(request);
-            Space space = spaceService.getById(spaceId);
-            ThrowUtils.throwIf(space == null, ErrorCode.PARAMS_ERROR, "空间不存在");
-            // 仅空间管理员和管理员可以查看空间内的图片
-//            ThrowUtils.throwIf(!loginUser.getId().equals(space.getUserId()) && !userService.isAdmin(loginUser), ErrorCode.NO_AUTH_ERROR, "没有空间权限");
-            boolean b = StpKit.SPACE.hasPermission(SpaceUserPermissionConstant.PICTURE_VIEW);
-            ThrowUtils.throwIf(!b,ErrorCode.NO_AUTH_ERROR,"没有空间权限");
-
-        } else {
-            // 访问公共图库
-            // 普通用户只能看到已通过审核的图片
-            pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
-            pictureQueryRequest.setNullSpaceId(true);
-
-        }
         Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
                 pictureService.getQueryWrapper(pictureQueryRequest));
         Page<PictureVO> pictureVOPage = pictureService.getPictureVOPage(picturePage, request);

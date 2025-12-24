@@ -1,5 +1,6 @@
 package org.lpz.yupicturebackend.controller;
 
+import cn.hutool.core.util.ObjUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
@@ -168,12 +169,14 @@ public class SpaceController {
 
         User user = userService.getLoginUser(request);
         // 验证权限，非管理员只能获取自己的空间
-        ThrowUtils.throwIf(!space.getUserId().equals(user.getId()) && !userService.isAdmin(user), ErrorCode.NO_AUTH_ERROR, "获取数据失败，没有空间权限");
+//        ThrowUtils.throwIf(!space.getUserId().equals(user.getId()) && !userService.isAdmin(user), ErrorCode.NO_AUTH_ERROR, "获取数据失败，没有空间权限");
         SpaceVO spaceVO = SpaceVO.objToVo(space);
         spaceVO.setUser(userService.getUserVO(user));
 
         // 设置权限列表
         List<String> permissionList = spaceUserAuthManager.getPermissionList(space, user);
+        // 如果没有任何权限并且非管理员，则无权限
+        ThrowUtils.throwIf(!userService.isAdmin(user) && ObjUtil.isEmpty(permissionList), ErrorCode.NO_AUTH_ERROR, "没有空间权限");
         spaceVO.setPermissionList(permissionList);
 
         return ResultUtils.success(spaceVO);

@@ -8,7 +8,7 @@ server:
         max-age: 2592000 # 30天
 spring:
   application:
-    name: yu-picture-backend
+    name: yu-picture-backend-ddd
 #  profiles:
 #    active: local
   # 数据库配置
@@ -42,7 +42,7 @@ spring:
             type: CLASS_BASED
             props:
               strategy: standard
-              algorithmClassName: org.lpz.yupicturebackend.manager.sharding.PictureShardingAlgorithm
+              algorithmClassName: org.lpz.yupicture.shared.sharding.PictureShardingAlgorithm
     props:
       sql-show: true
 
@@ -85,4 +85,4 @@ knife4j:
       default:
         api-rule: package
         api-rule-resources:
-          - org.lpz.yupicturebackend.controller
+          - org.lpz.yupicture.interfaces.controller

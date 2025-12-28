@@ -198,7 +198,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring-boot.version}</version>
                 <configuration>
-                    <mainClass>org.lpz.yupicturebackend.YuPictureBackendApplication</mainClass>
+                    <mainClass>org.lpz.yupicture.YuPictureBackendApplication</mainClass>
                     <skip>true</skip>
                 </configuration>
                 <executions>

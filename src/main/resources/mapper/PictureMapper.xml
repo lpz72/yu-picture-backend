@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="org.lpz.yupicturebackend.mapper.PictureMapper">
+<mapper namespace="org.lpz.yupicture.infrastructure.mapper.PictureMapper">
 
-    <resultMap id="BaseResultMap" type="org.lpz.yupicturebackend.model.entity.Picture">
+    <resultMap id="BaseResultMap" type="org.lpz.yupicture.domain.picture.entity.Picture">
             <id property="id" column="id" />
             <result property="url" column="url" />
             <result property="thumbnailUrl" column="thumbnailUrl" />

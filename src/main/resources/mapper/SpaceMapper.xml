@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="org.lpz.yupicturebackend.mapper.SpaceMapper">
+<mapper namespace="org.lpz.yupicture.infrastructure.mapper.SpaceMapper">
 
-    <resultMap id="BaseResultMap" type="org.lpz.yupicturebackend.model.entity.Space">
+    <resultMap id="BaseResultMap" type="org.lpz.yupicture.domain.space.entity.Space">
             <id property="id" column="id" />
             <result property="spaceName" column="spaceName" />
             <result property="spaceLevel" column="spaceLevel" />

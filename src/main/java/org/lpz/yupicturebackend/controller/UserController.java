@@ -1,11 +1,13 @@
 package org.lpz.yupicturebackend.controller;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.lpz.yupicturebackend.annotation.AuthCheck;
 import org.lpz.yupicturebackend.common.BaseResponse;
 import org.lpz.yupicturebackend.common.DeleteRequest;
 import org.lpz.yupicturebackend.common.ResultUtils;
 import org.lpz.yupicturebackend.constant.UserConstant;
+import org.lpz.yupicturebackend.exception.BusinessException;
 import org.lpz.yupicturebackend.exception.ErrorCode;
 import org.lpz.yupicturebackend.exception.ThrowUtils;
 import org.lpz.yupicturebackend.model.dto.user.*;
@@ -119,13 +121,30 @@ public class UserController {
      * @return
      */
     @PostMapping("/update")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+//    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest) {
 
         ThrowUtils.throwIf(userUpdateRequest == null,ErrorCode.PARAMS_ERROR,"请求参数为空");
+        Long id = userUpdateRequest.getId();
+        String userPassword = userUpdateRequest.getUserPassword();
+        String updatePassword = userUpdateRequest.getUpdatePassword();
 
         User user = new User();
         BeanUtils.copyProperties(userUpdateRequest,user);
+        // 如果修改密码
+        if (StrUtil.isNotBlank(userPassword)) {
+            // 先校验新密码
+            ThrowUtils.throwIf(StrUtil.isBlank(updatePassword),ErrorCode.PARAMS_ERROR,"新密码为空");
+            ThrowUtils.throwIf(updatePassword.length() < 8,ErrorCode.PARAMS_ERROR,"新密码过短");
+            User oldUser = userService.getById(id);
+            String encryptPassword = userService.getEncryptPassword(userPassword);
+            if (!encryptPassword.equals(oldUser.getUserPassword())) {
+                throw new BusinessException(ErrorCode.OPERATION_ERROR,"原密码不正确");
+            }
+            user.setUserPassword(userService.getEncryptPassword(updatePassword));
+
+        }
+
         boolean b = userService.updateById(user);
         ThrowUtils.throwIf(!b,ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(b);

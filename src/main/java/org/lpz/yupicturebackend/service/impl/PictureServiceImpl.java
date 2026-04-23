@@ -7,13 +7,26 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.ConcurrentHashSet;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSON;
+import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.alibaba.dashscope.aigc.generation.GenerationParam;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationOutput;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationResult;
+import com.alibaba.dashscope.common.MultiModalMessage;
+import com.alibaba.dashscope.common.Role;
+import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.alibaba.dashscope.exception.UploadFileException;
+import com.alibaba.dashscope.utils.JsonUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.repository.AbstractRepository;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.benmanes.caffeine.cache.Cache;
+import io.vertx.core.json.Json;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -43,6 +56,7 @@ import org.lpz.yupicturebackend.service.UserService;
 import org.lpz.yupicturebackend.utils.ColorSimilarUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -86,6 +100,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     private TransactionTemplate transactionTemplate;
     @Autowired
     private AliYunAiApi aliYunAiApi;
+
+    @Value("${aliYunAi.apiKey}")
+    private String apiKey;
 
 
     @Override
@@ -742,6 +759,49 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
         // 调用API接口，创建任务
         return aliYunAiApi.createOutPaintingTask(createOutPaintingTaskRequest);
+    }
+
+    @Override
+    public List<String> generatePictureInformation(String url) throws NoApiKeyException, UploadFileException {
+
+        MultiModalConversation conv = new MultiModalConversation();
+        MultiModalMessage userMessage = MultiModalMessage.builder().role(Role.USER.getValue())
+                .content(Arrays.asList(
+                        Collections.singletonMap("image", url),
+                        Collections.singletonMap("text", "请根据图片生成：\n" +
+                                "1. 图片名称（10字以内）\n" +
+                                "2. 图片描述（30字以内）\n" +
+                                "\n" +
+                                "要求：\n" +
+                                "- 优先识别具体实体：如人物身份（动漫角色/名人）、地标、品牌、动物品种等；若无法确定，则使用通用描述\n" +
+                                "- 内容可涵盖：物体、环境、事件\n" +
+                                "- 描述需简洁、客观，不编造不确定信息\n" +
+                                "\n" +
+                                "不要以Markdown格式返回，严格按以下格式返回，不要包含额外的文本，不要翻译：\n" +
+                                "{\n" +
+                                "  \"title\": \"\",\n" +
+                                "  \"desc\": \"\"\n" +
+                                "}"))).build();
+        MultiModalConversationParam param = MultiModalConversationParam.builder()
+                .apiKey(apiKey)
+                .model("qwen3.6-plus")
+                .thinkingBudget(500)
+                .message(userMessage)
+                .build();
+        String result = (String) (conv.call(param)
+                .getOutput()
+                .getChoices()
+                .get(0)
+                .getMessage()
+                .getContent()
+                .get(0)
+                .get("text"));
+        JSONObject entries = JSONUtil.parseObj(result);
+        List<String> results = new ArrayList<>();
+        results.add(entries.getStr("title"));
+        results.add(entries.getStr("desc"));
+
+        return results;
     }
 
     /**

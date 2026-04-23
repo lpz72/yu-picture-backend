@@ -13,6 +13,11 @@ public class UserUpdateRequest implements Serializable {
     private Long id;
 
     /**
+     * 用户账号
+     */
+    private String userAccount;
+
+    /**
      * 用户昵称
      */
     private String userName;
@@ -21,6 +26,16 @@ public class UserUpdateRequest implements Serializable {
      * 用户头像
      */
     private String userAvatar;
+
+    /**
+     * 密码
+     */
+    private String userPassword;
+
+    /**
+     * 更新密码
+     */
+    private String updatePassword;
 
     /**
      * 简介

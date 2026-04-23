@@ -1,5 +1,7 @@
 package org.lpz.yupicturebackend.service;
 
+import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.alibaba.dashscope.exception.UploadFileException;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -154,5 +156,12 @@ public interface PictureService extends IService<Picture> {
      * @return
      */
     CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest,User loginUser);
+
+    /**
+     * AI 生成图片信息
+     * @param url
+     * @return
+     */
+    List<String> generatePictureInformation(String url) throws NoApiKeyException, UploadFileException;
 
 }

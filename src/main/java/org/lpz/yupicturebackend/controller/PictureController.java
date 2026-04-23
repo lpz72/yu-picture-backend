@@ -2,6 +2,8 @@ package org.lpz.yupicturebackend.controller;
 
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
+import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.alibaba.dashscope.exception.UploadFileException;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -526,6 +528,22 @@ public class PictureController {
         ThrowUtils.throwIf(taskId == null, ErrorCode.PARAMS_ERROR);
 
         return ResultUtils.success(aliYunAiApi.getOutPaintingTask(taskId));
+
+    }
+
+    /**
+     * 根据图片url生成图片信息
+     * @param url
+     * @return
+     * @throws NoApiKeyException
+     * @throws UploadFileException
+     */
+    @GetMapping("/ai_generate_picture_information")
+    public BaseResponse<List<String>> generatePictureInformation(String url) throws NoApiKeyException, UploadFileException {
+
+        ThrowUtils.throwIf(url == null, ErrorCode.PARAMS_ERROR);
+
+        return ResultUtils.success(pictureService.generatePictureInformation(url));
 
     }
 
